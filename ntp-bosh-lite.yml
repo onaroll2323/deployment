@@ -1,0 +1,71 @@
+---
+name: ntp-server
+director_uuid: 1dbad3aa-aefc-455d-ada4-e8a2598b4de9
+
+compilation:
+  cloud_properties:
+    instance_type: m1.small
+    availability_zone: nova
+  network: default
+  reuse_compilation_vms: true
+  workers: 1
+
+jobs:
+- instances: 1
+  name: ntpd
+  networks:
+  - default:
+    - dns
+    - gateway
+    name: default
+    static_ips:
+    - 192.168.1.5
+  persistent_disk: 1024
+  resource_pool: small_z1
+  templates:
+  - { release: ntp, name: ntpd }
+  properties:
+    ntp_conf: |
+      # Our upstream timekeepers
+      # change 'us' to your countries two-letter domain
+      server 0.us.pool.ntp.org
+      server 1.us.pool.ntp.org
+      server 2.us.pool.ntp.org
+      # "Batten down the hatches!"
+      restrict default kod nomodify notrap nopeer noquery
+      restrict -6 default kod nomodify notrap nopeer noquery
+      restrict 127.0.0.0 mask 255.0.0.0
+      restrict -6 ::1
+
+networks:
+- name: default
+  subnets:
+  - range: 192.168.1.0/24
+    dns:
+      - 8.8.8.8
+    gateway: 192.168.1.1
+    static: [192.168.1.5]
+    cloud_properties :
+      net_id: db791934-bbba-4b75-bb20-219aa4b7430d
+
+releases:
+  - name: ntp
+    version: latest
+
+resource_pools:
+- cloud_properties:
+    instance_type: m1.small
+    availability_zone: nova
+    security_group: [default]  
+  name: small_z1
+  network: default
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3012
+
+update:
+  canaries: 1
+  canary_watch_time: 30000 - 600000
+  max_in_flight: 8
+  serial: false
+  update_watch_time: 30000 - 600000
